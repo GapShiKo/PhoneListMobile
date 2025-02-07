@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "999244112272",
+    "project_id": "hotelsapp-6150b",
+    "storage_bucket": "hotelsapp-6150b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:999244112272:android:cf00686be6d8c5e9b8d315",
+        "android_client_info": {
+          "package_name": "com.gapshiko.llistapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOqHKeDJm8YeQlcp3iRwAUBYyHrkyT1EU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
