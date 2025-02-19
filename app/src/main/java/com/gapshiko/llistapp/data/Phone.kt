@@ -7,7 +7,10 @@ data class Phone(
     val date: String = "",
     val memory: String = "",
     val soc: String = "",
-    val battery: Int = 0
+    val battery: Int = 0,
+    val charge: List<String> = emptyList(),
+    val display: List<String> = emptyList(),
+    val frontCam: String = "",
+    val mainCamera: List<String> = emptyList(),
+    val stockOS: String = ""
 )
-
-

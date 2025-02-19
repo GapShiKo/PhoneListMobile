@@ -6,6 +6,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,9 +48,10 @@ fun UserScreen(navController: NavController) {
                 description = document.getString("description").orEmpty()
                 gender = document.getString("gender").orEmpty()
                 favorites = document.get("favorites") as? List<String> ?: emptyList()
-                registration = document.getString("registrationDate").orEmpty()                }
+                registration = document.getString("registrationDate").orEmpty()
+            }
         }
-        }
+    }
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         item {
@@ -109,8 +112,6 @@ fun UserScreen(navController: NavController) {
     }
 }
 
-
-
 @Composable
 fun ProfileCard(title: String, value: String) {
     Card(
@@ -126,7 +127,7 @@ fun ProfileCard(title: String, value: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DatePickerDialog(
+fun CustomDatePickerDialog(
     onDateSelected: (String) -> Unit,
     onDismiss: () -> Unit,
     initialDate: Long? = null
@@ -141,13 +142,10 @@ fun DatePickerDialog(
             TextButton(
                 onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
-                        val calendar = Calendar.getInstance().apply {
-                            timeInMillis = millis
-                        }
-                        val formattedDate = "${calendar[Calendar.DAY_OF_MONTH]}/${
-                            calendar[Calendar.MONTH] + 1}/${
-                            calendar[Calendar.YEAR]
-                        }"
+                        val calendar = Calendar.getInstance().apply { timeInMillis = millis }
+                        val formattedDate = "${calendar[Calendar.DAY_OF_MONTH]}/" +
+                                "${calendar[Calendar.MONTH] + 1}/" +
+                                "${calendar[Calendar.YEAR]}"
                         onDateSelected(formattedDate)
                     }
                     onDismiss()
@@ -162,7 +160,7 @@ fun DatePickerDialog(
     }
 }
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(navController: NavController) {
     val auth = FirebaseAuth.getInstance()
@@ -197,9 +195,7 @@ fun EditProfileScreen(navController: NavController) {
                 val day = parts[0].toInt()
                 val month = parts[1].toInt() - 1
                 val year = parts[2].toInt()
-                Calendar.getInstance().apply {
-                    set(year, month, day)
-                }.timeInMillis
+                Calendar.getInstance().apply { set(year, month, day) }.timeInMillis
             } else null
         } else null
     }
@@ -227,17 +223,28 @@ fun EditProfileScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
                 OutlinedTextField(
                     value = birthDate,
                     onValueChange = {},
                     label = { Text("Birth Date") },
                     readOnly = true,
+                    enabled = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showDatePicker = true }
-                        .padding(top = 8.dp),
-                    interactionSource = remember { MutableInteractionSource() }
+                        .matchParentSize()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            showDatePicker = true
+                        }
                 )
             }
 
@@ -250,23 +257,28 @@ fun EditProfileScreen(navController: NavController) {
                     .padding(top = 8.dp)
             )
 
-            Box(modifier = Modifier.fillMaxWidth()) {
+            ExposedDropdownMenuBox(
+                expanded = genderExpanded,
+                onExpandedChange = { genderExpanded = !genderExpanded },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
                 OutlinedTextField(
                     value = gender,
                     onValueChange = {},
                     label = { Text("Gender") },
                     readOnly = true,
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = genderExpanded)
+                    },
                     modifier = Modifier
+                        .menuAnchor()
                         .fillMaxWidth()
-                        .clickable { genderExpanded = true }
-                        .padding(top = 8.dp),
-                    interactionSource = remember { MutableInteractionSource() }
                 )
-
-                DropdownMenu(
+                ExposedDropdownMenu(
                     expanded = genderExpanded,
-                    onDismissRequest = { genderExpanded = false },
-                    modifier = Modifier.fillMaxWidth()
+                    onDismissRequest = { genderExpanded = false }
                 ) {
                     genderOptions.forEach { option ->
                         DropdownMenuItem(
@@ -308,9 +320,8 @@ fun EditProfileScreen(navController: NavController) {
         }
     }
 
-    // Date Picker Dialog
     if (showDatePicker) {
-        DatePickerDialog(
+        CustomDatePickerDialog(
             onDateSelected = { date ->
                 birthDate = date
                 showDatePicker = false
@@ -320,7 +331,6 @@ fun EditProfileScreen(navController: NavController) {
         )
     }
 }
-
 
 @Composable
 fun DeleteAccountScreen(navController: NavController) {
@@ -370,8 +380,10 @@ fun DeleteAccountScreen(navController: NavController) {
                         }
                 }
             },
-            onDismiss = { showConfirmationDialog = false
-            navController.navigate("profile")}
+            onDismiss = {
+                showConfirmationDialog = false
+                navController.navigate("profile")
+            }
         )
     }
 }
@@ -396,5 +408,3 @@ fun ConfirmationDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         }
     )
 }
-
-
