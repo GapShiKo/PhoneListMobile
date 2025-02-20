@@ -39,6 +39,7 @@ fun UserScreen(navController: NavController) {
     var gender by remember { mutableStateOf("") }
     var favorites by remember { mutableStateOf(emptyList<String>()) }
     var registration by remember { mutableStateOf("") }
+    var reviewCount by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(currentUser) {
         currentUser.let { user ->
@@ -50,6 +51,12 @@ fun UserScreen(navController: NavController) {
                 favorites = document.get("favorites") as? List<String> ?: emptyList()
                 registration = document.getString("registrationDate").orEmpty()
             }
+            db.collection("reviews")
+                .whereEqualTo("userId", user.uid)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    reviewCount = snapshot.size()
+                }
         }
     }
 
@@ -57,7 +64,6 @@ fun UserScreen(navController: NavController) {
         item {
             Text(text = "User Profile", style = MaterialTheme.typography.titleLarge)
         }
-
         item {
             ProfileCard("Login", currentUser.email.toString())
         }
@@ -79,7 +85,9 @@ fun UserScreen(navController: NavController) {
         item {
             ProfileCard("Favorites count", favorites.size.toString())
         }
-
+        item {
+            ProfileCard("Reviews count", reviewCount.toString())
+        }
         item {
             Button(
                 onClick = {
@@ -91,7 +99,6 @@ fun UserScreen(navController: NavController) {
                 Text("Log out")
             }
         }
-
         item {
             Button(
                 onClick = { navController.navigate("editProfile") },
@@ -100,7 +107,6 @@ fun UserScreen(navController: NavController) {
                 Text("Edit Profile")
             }
         }
-
         item {
             Button(
                 onClick = { navController.navigate("deleteAccount") },

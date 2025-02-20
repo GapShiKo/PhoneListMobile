@@ -29,11 +29,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import com.google.firebase.auth.FirebaseAuth
 import com.gapshiko.llistapp.data.Phone
 import com.gapshiko.llistapp.data.Review
-import com.gapshiko.llistapp.data.PhoneViewModel
-import com.gapshiko.llistapp.data.ReviewsViewModel
-import com.google.firebase.auth.FirebaseAuth
+import com.gapshiko.llistapp.viewmodel.PhoneViewModel
+import com.gapshiko.llistapp.viewmodel.ReviewsViewModel
+import com.gapshiko.llistapp.viewmodel.FavoritesViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,40 +43,109 @@ import java.util.Locale
 fun PhoneScreen(
     phone: Phone,
     phoneViewModel: PhoneViewModel = viewModel(),
-    reviewsViewModel: ReviewsViewModel = viewModel()
+    reviewsViewModel: ReviewsViewModel = viewModel(),
+    favoritesViewModel: FavoritesViewModel = viewModel()
 ) {
+    val currentUser = FirebaseAuth.getInstance().currentUser
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabTitles = listOf("Description", "Reviews")
+    val currentUserId = currentUser?.uid
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTabIndex) {
-            tabTitles.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    text = { Text(title) }
-                )
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != null) {
+            favoritesViewModel.loadFavorites(currentUserId)
+        }
+    }
+    val favoriteIds by favoritesViewModel.favoriteIds.collectAsState()
+    val isFavorite = favoriteIds.contains(phone.id)
+
+    var showReviewDialog by remember { mutableStateOf(false) }
+    var reviewDialogComment by remember { mutableStateOf("") }
+    var reviewDialogRating by remember { mutableIntStateOf(0) }
+    val reviews by reviewsViewModel.reviews.collectAsState()
+    val existingReview = reviews.find { it.userId == currentUser?.uid }
+
+    Scaffold(
+        floatingActionButton = {
+            when (selectedTabIndex) {
+                0 -> {
+                    if (currentUserId != null) {
+                        FloatingActionButton(
+                            onClick = {
+                                if (isFavorite) {
+                                    favoritesViewModel.removeFavorite(currentUserId, phone.id)
+                                } else {
+                                    favoritesViewModel.addFavorite(currentUserId, phone.id)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
+                                contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                                tint = if (isFavorite) Color.Yellow else Color.Gray
+                            )
+                        }
+                    }
+                }
+                1 -> {
+                    FloatingActionButton(
+                        onClick = {
+                            reviewDialogComment = existingReview?.comment ?: ""
+                            reviewDialogRating = existingReview?.rating ?: 0
+                            showReviewDialog = true
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (existingReview != null) Icons.Filled.Edit else Icons.Filled.Add,
+                            contentDescription = if (existingReview != null) "Edit Review" else "Add Review"
+                        )
+                    }
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                tabTitles.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title) }
+                    )
+                }
+            }
+            when (selectedTabIndex) {
+                0 -> PhoneDescription(phone = phone, phoneViewModel = phoneViewModel)
+                1 -> ReviewsContent(phoneId = phone.id, reviewsViewModel = reviewsViewModel)
             }
         }
-
-        when (selectedTabIndex) {
-            0 -> PhoneDescription(phone = phone, phoneViewModel = phoneViewModel)
-            1 -> ReviewsSection(phoneId = phone.id, reviewsViewModel = reviewsViewModel)
-        }
+    }
+    if (showReviewDialog) {
+        ReviewDialog(
+            initialComment = reviewDialogComment,
+            initialRating = reviewDialogRating,
+            onDismiss = { showReviewDialog = false },
+            onSubmit = { comment, rating ->
+                reviewsViewModel.submitReview(phone.id, comment, rating)
+                showReviewDialog = false
+            }
+        )
     }
 }
 
 @Composable
 fun PhoneDescription(phone: Phone, phoneViewModel: PhoneViewModel = viewModel()) {
     val context = LocalContext.current
-
     LaunchedEffect(Unit) {
         phoneViewModel.loadImages(phone, context)
     }
-
     val pagerState = rememberPagerState { phone.image.size }
     val scrollState = rememberScrollState()
-
     Column(
         modifier = Modifier
             .verticalScroll(scrollState)
@@ -107,7 +177,6 @@ fun PhoneDescription(phone: Phone, phoneViewModel: PhoneViewModel = viewModel())
                     )
                 }
             }
-
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -115,11 +184,7 @@ fun PhoneDescription(phone: Phone, phoneViewModel: PhoneViewModel = viewModel())
                 horizontalArrangement = Arrangement.Center
             ) {
                 repeat(pagerState.pageCount) { iteration ->
-                    val color = if (pagerState.currentPage == iteration) {
-                        Color.DarkGray
-                    } else {
-                        Color.LightGray
-                    }
+                    val color = if (pagerState.currentPage == iteration) Color.DarkGray else Color.LightGray
                     Box(
                         modifier = Modifier
                             .padding(2.dp)
@@ -130,9 +195,7 @@ fun PhoneDescription(phone: Phone, phoneViewModel: PhoneViewModel = viewModel())
                 }
             }
         }
-
         Spacer(modifier = Modifier.height(16.dp))
-
         if (phone.name.isNotBlank()) {
             Text(
                 text = phone.name,
@@ -141,41 +204,26 @@ fun PhoneDescription(phone: Phone, phoneViewModel: PhoneViewModel = viewModel())
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
-
         if (phone.date.isNotBlank()) {
             InfoCard(title = "Release date", content = phone.date)
         }
-
         if (phone.display.isNotEmpty()) {
-            InfoCard(
-                title = "Display",
-                content = phone.display.joinToString(separator = "\n")
-            )
+            InfoCard(title = "Display", content = phone.display.joinToString(separator = "\n"))
         }
-
         if (phone.memory.isNotBlank()) {
             InfoCard(title = "Memory", content = phone.memory)
         }
-
         if (phone.soc.isNotBlank()) {
             InfoCard(title = "System-On-Chip", content = phone.soc)
         }
-
         if (phone.mainCamera.isNotEmpty()) {
-            InfoCard(
-                title = "Main camera",
-                content = phone.mainCamera.joinToString(separator = "\n")
-            )
+            InfoCard(title = "Main camera", content = phone.mainCamera.joinToString(separator = "\n"))
         }
-
         if (phone.frontCam.isNotBlank()) {
             InfoCard(title = "Front camera", content = phone.frontCam)
         }
-
         val batteryAndCharge = buildString {
-            if (phone.battery != 0) {
-                append("${phone.battery} mAh")
-            }
+            if (phone.battery != 0) append("${phone.battery} mAh")
             if (phone.charge.isNotEmpty()) {
                 if (isNotEmpty()) append("\n")
                 append("Charge: ${phone.charge.joinToString(separator = ", ")}")
@@ -184,7 +232,6 @@ fun PhoneDescription(phone: Phone, phoneViewModel: PhoneViewModel = viewModel())
         if (batteryAndCharge.isNotBlank()) {
             InfoCard(title = "Battery", content = batteryAndCharge)
         }
-
         if (phone.stockOS.isNotBlank()) {
             InfoCard(title = "Stock OS", content = phone.stockOS)
         }
@@ -216,77 +263,31 @@ fun InfoCard(title: String, content: String) {
 }
 
 @Composable
-fun ReviewsSection(phoneId: String, reviewsViewModel: ReviewsViewModel = viewModel()) {
+fun ReviewsContent(phoneId: String, reviewsViewModel: ReviewsViewModel = viewModel()) {
     LaunchedEffect(phoneId) {
         reviewsViewModel.loadReviews(phoneId)
     }
     val reviews by reviewsViewModel.reviews.collectAsState()
-    val currentUser = FirebaseAuth.getInstance().currentUser
-
-    var showDialog by remember { mutableStateOf(false) }
-    var dialogComment by remember { mutableStateOf("") }
-    var dialogRating by remember { mutableIntStateOf(0) }
-
-    val existingReview = reviews.find { it.userId == currentUser?.uid }
-
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                dialogComment = existingReview?.comment ?: ""
-                dialogRating = existingReview?.rating ?: 0
-                showDialog = true
-            }) {
-                Icon(
-                    imageVector = if (existingReview != null) Icons.Default.Edit else Icons.Default.Add,
-                    contentDescription = if (existingReview != null) "Edit Review" else "Add Review"
-                )
-            }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text("Reviews", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                if (reviews.isNotEmpty()) {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
-                        items(reviews) { review ->
-                            ReviewCard(
-                                review = review,
-                                onDelete = { reviewsViewModel.deleteReview(it) },
-                                onEdit = { r ->
-                                    dialogComment = r.comment
-                                    dialogRating = r.rating
-                                    showDialog = true
-                                }
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "There is no reviews",
-                        style = MaterialTheme.typography.bodyMedium
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
+        Text("Reviews", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        if (reviews.isNotEmpty()) {
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(reviews) { review ->
+                    ReviewCard(
+                        review = review,
+                        onDelete = { reviewsViewModel.deleteReview(it) },
+                        onEdit = { /* Optionally, inline edit can trigger dialog via parent FAB */ }
                     )
                 }
             }
-            if (showDialog) {
-                ReviewDialog(
-                    initialComment = dialogComment,
-                    initialRating = dialogRating,
-                    onDismiss = { showDialog = false },
-                    onSubmit = { comment, rating ->
-                        reviewsViewModel.submitReview(phoneId, comment, rating)
-                        showDialog = false
-                    }
-                )
-            }
+        } else {
+            Text(
+                text = "There are no reviews",
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
@@ -389,7 +390,10 @@ fun ReviewCard(review: Review, onDelete: (Review) -> Unit, onEdit: (Review) -> U
             Text(text = formattedDate, style = MaterialTheme.typography.bodySmall)
             Spacer(modifier = Modifier.height(4.dp))
             if (currentUser != null && currentUser.uid == review.userId) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
                     Text(
                         text = "Edit",
                         style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.primary),

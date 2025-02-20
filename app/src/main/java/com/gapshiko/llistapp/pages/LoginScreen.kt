@@ -5,10 +5,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.gapshiko.llistapp.R
@@ -22,6 +27,7 @@ import java.util.Date
 fun LoginScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
@@ -75,7 +81,6 @@ fun LoginScreen(navController: NavController) {
                                 Toast.makeText(context, "Error: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                             }
                         }
-
                 }
             } catch (e: Exception) {
                 Toast.makeText(context, "Error during signing in with Google", Toast.LENGTH_SHORT).show()
@@ -97,7 +102,16 @@ fun LoginScreen(navController: NavController) {
             value = password,
             onValueChange = { password = it.trim() },
             label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                        contentDescription = "Toggle password visibility"
+                    )
+                }
+            }
         )
 
         Button(
@@ -115,7 +129,7 @@ fun LoginScreen(navController: NavController) {
                             }
                         }
                 } else {
-                    Toast.makeText(context, "Enter email и password!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Enter email and password!", Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp)

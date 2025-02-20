@@ -8,5 +8,5 @@ data class User(
     val description: String = "",
     val gender: String = "",
     val registrationDate: String = "",
-    val favoritesCount: Int = 0
+    val favorites: List<String> = emptyList()
 )

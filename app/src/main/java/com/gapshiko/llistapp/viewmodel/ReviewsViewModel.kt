@@ -1,7 +1,8 @@
-package com.gapshiko.llistapp.data
+package com.gapshiko.llistapp.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.gapshiko.llistapp.data.Review
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration

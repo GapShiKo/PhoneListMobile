@@ -1,10 +1,11 @@
-package com.gapshiko.llistapp.data
+package com.gapshiko.llistapp.viewmodel
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.gapshiko.llistapp.data.Phone
 import kotlinx.coroutines.launch
 
 class PhoneViewModel : ViewModel() {

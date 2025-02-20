@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -42,7 +41,6 @@ data class FilterParams(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = viewModel()) {
-    val context = LocalContext.current
     val phones by homeViewModel.phones.collectAsState()
     val auth = FirebaseAuth.getInstance()
     var isLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
@@ -135,7 +133,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
-            homeViewModel.loadPhones(context)
+            homeViewModel.loadPhones()
         }
     }
 
@@ -236,14 +234,10 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if (auth.currentUser == null) {
-                Text("To see the list, please, log in")
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { navController.navigate("login") }) {
-                    Text("Login")
-                }
-            } else {
-                FavoritesList(navController)
+            Text("To see the list, please, log in")
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = { navController.navigate("login") }) {
+                Text("Login")
             }
         }
     }
@@ -445,17 +439,10 @@ fun PhoneItem(phone: Phone, onPhoneClick: (Phone) -> Unit) {
             .fillMaxWidth()
             .clickable { onPhoneClick(phone) }
     ) {
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             val imageUrl = phone.image.firstOrNull()
             val painter = rememberAsyncImagePainter(model = imageUrl)
-            val backgroundColor = if (painter.state is AsyncImagePainter.State.Loading) {
-                Color.Gray
-            } else {
-                Color.White
-            }
+            val backgroundColor = if (painter.state is AsyncImagePainter.State.Loading) Color.Gray else Color.White
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -469,19 +456,19 @@ fun PhoneItem(phone: Phone, onPhoneClick: (Phone) -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(RoundedCornerShape(8.dp))
-                        .padding(vertical = 1.dp),
+                        .padding(1.dp),
                     contentScale = ContentScale.Fit
                 )
                 if (painter.state is AsyncImagePainter.State.Loading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 }
             }
-            Spacer(Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(text = phone.name, style = MaterialTheme.typography.titleLarge)
                 Text(text = "Release: ${phone.date}", style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Memory: ${phone.memory}", style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Battery: ${phone.battery}mAh", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Battery: ${phone.battery} mAh", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
