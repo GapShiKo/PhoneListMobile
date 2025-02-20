@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.material3.ExposedDropdownMenuDefaults.outlinedTextFieldColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +40,6 @@ data class FilterParams(
     val cameraMPMin: Int = 0
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = viewModel()) {
     val phones by homeViewModel.phones.collectAsState()
@@ -186,11 +184,7 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
                                 contentDescription = "Search icon",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        },
-                        colors = outlinedTextFieldColors(
-                            focusedBorderColor = Color.Gray,
-                            unfocusedBorderColor = Color.Gray
-                        )
+                        }
                     )
                 }
 
