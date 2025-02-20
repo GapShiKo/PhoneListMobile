@@ -210,8 +210,8 @@ fun PhoneDescription(phone: Phone, phoneViewModel: PhoneViewModel = viewModel())
         if (phone.display.isNotEmpty()) {
             InfoCard(title = "Display", content = phone.display.joinToString(separator = "\n"))
         }
-        if (phone.memory.isNotBlank()) {
-            InfoCard(title = "Memory", content = phone.memory)
+        if (phone.memory.isNotEmpty()) {
+            InfoCard(title = "Memory", content = phone.memory.joinToString(separator = "\n"))
         }
         if (phone.soc.isNotBlank()) {
             InfoCard(title = "System-On-Chip", content = phone.soc)

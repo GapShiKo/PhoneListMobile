@@ -5,7 +5,7 @@ data class Phone(
     val name: String = "",
     val image: List<String> = emptyList(),
     val date: String = "",
-    val memory: String = "",
+    val memory: List<String> = emptyList(),
     val soc: String = "",
     val battery: Int = 0,
     val charge: List<String> = emptyList(),

@@ -17,11 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.Coil
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.gapshiko.llistapp.data.Phone
 import com.gapshiko.llistapp.viewmodel.HomeViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -56,8 +59,10 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
     }
 
     val availableRams = remember(phones) {
-        phones.mapNotNull { phone ->
-            phone.memory.split(",").first().split("/").first().trim().toIntOrNull()
+        phones.flatMap { phone ->
+            phone.memory.mapNotNull { config ->
+                config.split("/").firstOrNull()?.trim()?.toIntOrNull()
+            }
         }.distinct().sorted()
     }
 
@@ -100,8 +105,9 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
                 phone.date.split("/").last().toIntOrNull() == year
             } ?: true
 
-            val ramMatch = filterParams.ramMin <= (phone.memory.split(",").first()
-                .split("/").first().trim().toIntOrNull() ?: 0)
+            val ramMatch = phone.memory.mapNotNull { config ->
+                config.split("/").firstOrNull()?.trim()?.toIntOrNull()
+            }.any { it >= filterParams.ramMin }
 
             val osMatch = filterParams.os?.let { os ->
                 phone.stockOS.startsWith(os, ignoreCase = true)
@@ -135,6 +141,10 @@ fun HomeScreen(navController: NavController, homeViewModel: HomeViewModel = view
         if (isLoggedIn) {
             homeViewModel.loadPhones()
         }
+    }
+
+    if (phones.isNotEmpty()) {
+        PreloadImages(phones)
     }
 
     if (isLoggedIn) {
@@ -262,14 +272,23 @@ fun FilterDialog(
 
     val batteryMin by remember { mutableIntStateOf(currentParams.batteryMin) }
     var selectedYear by remember { mutableStateOf(currentParams.year) }
-    var selectedRamIndex by remember { mutableIntStateOf(
-        availableRams.indexOf(currentParams.ramMin).takeIf { it >= 0 } ?: 0) }
+    var selectedRamIndex by remember {
+        mutableIntStateOf(
+            availableRams.indexOf(currentParams.ramMin).takeIf { it >= 0 } ?: 0
+        )
+    }
     val ramMinValue = if (availableRams.isNotEmpty()) availableRams[selectedRamIndex] else 0
 
     var selectedOS by remember { mutableStateOf(currentParams.os) }
-    var chargingSpeedMin by remember { mutableIntStateOf(if (currentParams.chargingSpeedMin == 0) minCharging else currentParams.chargingSpeedMin) }
-    var screenSizeMin by remember { mutableFloatStateOf(if (currentParams.screenSizeMin.toInt() == 0) minScreenSize else currentParams.screenSizeMin) }
-    var cameraMPMin by remember { mutableIntStateOf(if (currentParams.cameraMPMin == 0) minCameraMP else currentParams.cameraMPMin) }
+    var chargingSpeedMin by remember {
+        mutableIntStateOf(if (currentParams.chargingSpeedMin == 0) minCharging else currentParams.chargingSpeedMin)
+    }
+    var screenSizeMin by remember {
+        mutableFloatStateOf(if (currentParams.screenSizeMin.toInt() == 0) minScreenSize else currentParams.screenSizeMin)
+    }
+    var cameraMPMin by remember {
+        mutableIntStateOf(if (currentParams.cameraMPMin == 0) minCameraMP else currentParams.cameraMPMin)
+    }
 
     var yearExpanded by remember { mutableStateOf(false) }
     var osExpanded by remember { mutableStateOf(false) }
@@ -467,8 +486,24 @@ fun PhoneItem(phone: Phone, onPhoneClick: (Phone) -> Unit) {
             Column {
                 Text(text = phone.name, style = MaterialTheme.typography.titleLarge)
                 Text(text = "Release: ${phone.date}", style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Memory: ${phone.memory}", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Memory: ${phone.memory.joinToString(", ")}", style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Battery: ${phone.battery} mAh", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+@Composable
+fun PreloadImages(phones: List<Phone>) {
+    val context = LocalContext.current
+    val imageLoader = Coil.imageLoader(context)
+    LaunchedEffect(phones) {
+        phones.forEach { phone ->
+            phone.image.firstOrNull()?.let { imageUrl ->
+                val request = ImageRequest.Builder(context)
+                    .data(imageUrl)
+                    .build()
+                imageLoader.enqueue(request)
             }
         }
     }
